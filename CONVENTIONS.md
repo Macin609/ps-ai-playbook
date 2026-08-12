@@ -29,22 +29,42 @@ This file contains the cross-module rules that an agent should load for every Pr
 - Business rules, workflows, persistence, mapping, and API communication belong in focused classes. Do not add extensive inline business logic, god methods, or unrelated responsibilities to an existing large class.
 - Prefer constructor injection and explicit interfaces at boundaries that need substitution in tests. Register classes with several dependencies as container services.
 
+## Identifiers and configuration
+
+- Namespace routes, service IDs, configuration/cache/lock/cron keys, custom hooks, assets, and other global identifiers with the module name. Use structured service IDs such as `<module>.<area>.<responsibility>`.
+- Define module name/version, controller and tab names, grid IDs, configuration keys, persistent state/error codes, and module-owned table/primary-key names as constants. Give each identifier one PHP owner; do not repeat raw strings across classes.
+- Keep configuration keys in a central configuration data class. Access them through a typed configuration service that applies scope, defaults, normalization, decoding, and critical-value validation; business code must not use raw configuration-key strings.
+- Give dynamic configuration keys a central factory/prefix and an explicit cleanup lifecycle. Keep the release version synchronized between Composer metadata, the root module class, and other required manifests.
+
 ## Composer and packaging
 
 - Use Composer PSR-4 autoloading for `<MODULE_SRC>` and classmap only legacy PrestaShop entrypoints that require it.
 - Put test namespaces and test-only packages in `autoload-dev` and `require-dev`.
 - The production module package must contain a generated `vendor/` when it has Composer dependencies. Load `vendor/autoload.php` from the module bootstrap and fail clearly if a required production autoloader is missing; do not maintain a second fallback autoloader.
-- Keep production installs optimized and exclude development dependencies.
+- New modules must not depend on `avalanchemedia/prestashop-module-configuration`, `avalanchemedia/prestashop-module-hooks`, or `avalanchemedia/prestashop-module-installer`. Implement only the required installer, hook, and configuration adapters locally for the selected PrestaShop track. Do not remove these packages from existing modules without an explicit migration task.
+- Prefer small module-local composition over copied universal base classes. Consider a shared runtime package only after the same substantial, stable behavior is used by at least three modules and has a versioned API plus CI for every supported PrestaShop track.
+- Scope/prefix every third-party production dependency bundled with a module into the module namespace unless the selected PrestaShop version explicitly provides and supports that library. Exclude Composer/build plugins and development-only packages from the scoped production artifact.
+- Keep production installs authoritative and optimized, use `prepend-autoloader: false` where supported, and exclude development dependencies. Test the final scoped production artifact, not only the unscoped source tree.
+- Run PrestaShop Autoindex after adding or moving distributable directories. Include generated protective `index.php` files and do not hand-edit them.
+
+## Admin controllers and routes
+
+- Every back-office action, including AJAX actions, must declare authorization through the mechanism supported by the selected PrestaShop track. Map read/create/update/delete operations to the matching permission; securing only the menu or parent controller is insufficient.
+- Bind each admin route to the correct installed tab/ACL identifier (`_legacy_controller` and `_legacy_link` where the track requires them). Install a hidden tab when an action needs permissions but no visible menu item.
+- Use `GET` only for safe reads. State-changing actions use `POST` or another supported mutation method, validate CSRF, constrain route identifiers (for example to digits), and redirect after successful form writes.
+- Prefer framework response objects such as `JsonResponse`. A legacy controller may use one shared response helper; do not scatter `die(json_encode(...))` across actions.
 
 ## Hooks and dependency injection
 
 - Implement each non-trivial hook in a dedicated class under `src/Module/Hook/`, split into `Admin/` and `Front/` where useful. The root `hook...()` method only delegates and handles the PrestaShop boundary result/error.
 - A small hook with only the module, context, and hook parameters may be instantiated by the delegating method. Register hooks with additional collaborators as services and inject their dependencies.
+- Give every hook an explicit input and return contract. On a caught boundary failure, return the neutral value required by that hook; do not interchange `false`, `''`, `[]`, and `void` without regard to the contract.
 - Keep service visibility scoped. Expose a service publicly only when a legacy controller or hook must retrieve it at runtime; do not broaden defaults in `common.yml`.
 
 ## Installation, removal, and upgrades
 
 - Keep install/uninstall orchestration in a dedicated installer class. Declare hooks, controllers or tabs, configuration defaults, mail templates, and SQL lifecycle there rather than scattering them through the root module class.
+- Build the module-local installer from only the capabilities the module needs: schema/data, hooks, scoped configuration, visible or ACL-only tabs, mail templates, and front-controller metadata. Do not copy a universal installer wrapper wholesale.
 - Installation and upgrades must be repeatable and safe after partial failure. Check every operation, clean up partial installation where practical, and return a real failure to PrestaShop.
 - Version schema and data changes through PrestaShop upgrade scripts. Do not silently modify an existing install schema without a matching upgrade path.
 - Do not use `die()` or a successful HTTP response to report migration failure.
@@ -53,9 +73,18 @@ This file contains the cross-module rules that an agent should load for every Pr
 ## Database and multistore
 
 - Put database access behind repositories or other focused persistence classes. `Db`, `DbQuery`, ObjectModel, and Doctrine DBAL are all acceptable when appropriate to the selected PrestaShop API; no single database API is mandatory.
+- Define a module-owned table name without `_DB_PREFIX_`. If an ObjectModel owns the mapping, keep `TABLE_NAME` and `PRIMARY_KEY` on that model and use them in `$definition`; if one repository owns the table, use a private repository constant; if several infrastructure classes use it, create a small Infrastructure/Database schema metadata class. Domain classes must not know table names.
+- Keep SQL schema, ObjectModel/ORM mapping, and upgrade scripts aligned. ObjectModel fields must declare correct types, validators, size, nullability, and required state. Accept the DDL/PHP identifier duplication at the install boundary and cover critical mapping with a schema self-check or test.
 - Use `_DB_PREFIX_`, cast numeric identifiers, escape string values with the appropriate PrestaShop/DBAL mechanism, whitelist dynamic SQL fragments, and check write results.
+- Encode identity and idempotency in `UNIQUE` constraints where possible, and index real join/filter/queue/cron paths, including their shop scope. New tables use the target-track engine placeholder and `utf8mb4` unless its documentation requires otherwise.
 - Use transactions and locking for multi-step writes, concurrency-sensitive jobs, and workflows that must remain consistent. Make retry and deduplication behavior explicit for cron and integration flows.
 - Decide and document the scope of every configuration value and stored record: global, shop group, or shop. Use explicit shop constraints for configuration and persist/filter `id_shop` for shop-specific data. Never assume that credentials, tokens, or operational state share the same scope.
+- Never hardcode database IDs for shops, languages, order states, or other installed entities. Resolve languages by ISO code and system entities by context, stable reference, or configuration; seed data must not depend on installation order.
+
+## Money and time
+
+- Store money in `DECIMAL` columns and carry it through domain/application code as normalized decimal strings or a money value object. Perform arithmetic and comparisons through one decimal service with explicit scale; do not use binary floats for price/payment decisions.
+- Store operational timestamps in UTC and convert to the relevant shop/admin timezone only for presentation. Name timestamps by meaning (attempted, succeeded, processed, expires) and isolate or inject the clock for testable time-dependent rules.
 
 ## Errors, logging, and public responses
 
@@ -78,10 +107,16 @@ This file contains the cross-module rules that an agent should load for every Pr
 - Validate and normalize all external input. Escape for the output context and use allowlists for action names, sort directions, filenames, routes, and other structural values.
 - Validate and consume one-time OAuth state, protect callback flows against replay, encrypt sensitive credentials at rest, and redact them from logs and diagnostics.
 
+## External integrations and cron
+
+- HTTP clients must set connect/request timeouts, verify TLS, preserve large numeric identifiers, classify failures, and sanitize response data before it reaches exceptions or logs. Propagate a correlation ID where the upstream API supports it.
+- Retry only idempotent operations and transient failures. Use a bounded exponential backoff with jitter, respect `Retry-After`, and reschedule instead of blocking a request worker for a long server-advertised delay.
+- Cron/integration jobs must use a lock, bounded batches or a deadline, deterministic idempotency, and a machine-readable summary. Track last attempt, last success, and last error separately.
+- Integration modules should expose a read-only self-check for critical configuration, schema, and runtime dependencies without revealing secret values.
+
 ## Tests and verification
 
 - Every new module must include automated tests and a working documented test command. New or changed business logic must have focused tests; bug fixes should include a regression test.
 - Isolate pure business rules from PrestaShop globals so they can be unit tested. Use narrow adapters, fixtures, or stubs for PrestaShop and database integration; add integration tests when behavior depends on schema, transactions, hooks, multistore, or framework wiring.
-- Before handing off a change, run the checks relevant to the affected module: PHP syntax, Composer validation/autoload generation, style/lint, automated tests, install/upgrade path when changed, and targeted manual verification in the declared PrestaShop version.
+- Before handing off a change, run the checks relevant to the affected module: PHP syntax, Composer validation/autoload generation, style/lint, Autoindex, automated tests, final scoped production build, install/upgrade path when changed, and targeted manual verification in the declared PrestaShop version.
 - Report exactly which checks ran and any checks that could not run. Do not claim verification from inspection alone.
-
