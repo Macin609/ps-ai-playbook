@@ -2,6 +2,7 @@
 
 - Confirm the target PrestaShop track and declared PHP compatibility.
 - Confirm entrypoints stay thin and new business logic is in focused, testable classes.
+- For service wiring changes, check placement and imports against `CONVENTIONS.md` (Hooks and dependency injection). Verify dependency resolution and the affected runtime paths in each intended admin/front container, including context-specific PrestaShop implementations; confirm context-only services are not registered in the opposite container. Report unavailable runtime checks explicitly.
 - Confirm global identifiers are module-prefixed constants with one owner; configuration uses its typed façade and explicit scope.
 - Confirm every admin route/action has the correct ACL, HTTP method, CSRF behavior, route constraints, and installed visible/hidden tab mapping.
 - Run PHP syntax checks and Composer validation/autoload generation where applicable.
