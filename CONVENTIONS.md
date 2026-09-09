@@ -32,9 +32,28 @@ This file contains the cross-module rules that an agent should load for every Pr
 ## Identifiers and configuration
 
 - Namespace routes, service IDs, configuration/cache/lock/cron keys, custom hooks, assets, and other global identifiers with the module name. Use structured service IDs such as `<module>.<area>.<responsibility>`.
-- Define module name/version, controller and tab names, grid IDs, configuration keys, persistent state/error codes, and module-owned table/primary-key names as constants. Give each identifier one PHP owner; do not repeat raw strings across classes.
+- Give module name/version, controller and tab names, grid IDs, configuration keys, persistent state/error codes, and module-owned schema identifiers a canonical owner under the shared-contract rules below. Use named constants or an appropriate typed contract supported by the declared platform.
 - Keep configuration keys in a central configuration data class. Access them through a typed configuration service that applies scope, defaults, normalization, decoding, and critical-value validation; business code must not use raw configuration-key strings.
-- Give dynamic configuration keys a central factory/prefix and an explicit cleanup lifecycle. Keep the release version synchronized between Composer metadata, the root module class, and other required manifests.
+- Give dynamic configuration keys a central factory/prefix and an explicit cleanup lifecycle. Treat the release version in Composer metadata, the root module class, and other required manifests as representations of one canonical value under the duplication rules below.
+
+## Canonical sources for shared contracts
+
+- Every technical or domain value whose meaning must stay consistent across multiple consumers must have one explicit owner and one canonical source. This includes minimum/maximum/default values; configuration names; table, column, primary-key and foreign-key names; state, error, reason and event codes; hook, route, service and integration-operation names; parser, fingerprint, schema and rules versions; form-field and request-parameter identifiers; module names; and shared timeout, batch and other operational values.
+- Place the source close to the component that owns the concept. Use a named constant, enum or equivalent typed contract, immutable value object, schema/configuration definition, public integration contract, or method for a derived value, as appropriate to the declared platform. Do not create a global class of unrelated constants.
+- Forms, validators, repositories, services, controllers, hooks, CLI/cron entrypoints, templates and other production consumers must obtain the value from that source. When direct access is unsuitable, pass it through a service, DTO, parameter or view model; do not create another manually synchronized definition for convenience.
+- Share by meaning, not by matching text or numbers. Keep different concepts separate even when their current values match, such as `DEFAULT_BATCH_LIMIT` and `MAX_BATCH_LIMIT` both being `50`. A one-off local literal without contract meaning does not need a constant merely for uniformity.
+
+### Required representations and independent modules
+
+- When a platform or file format requires physical duplication, name the canonical source and treat other occurrences as derived or synchronized representations. Update them through the supported process, add an automated or explicit consistency check, and confirm their agreement at handoff. Regenerate generated files with the project's standard generator; do not hand-edit them.
+- Do not access another module's internal constants if that creates an unapproved runtime dependency. Values shared between modules must be explicit integration contracts with a named owning module.
+- When an independent consumer must mirror an integration value locally, document the intentional duplication and owner, require a contract test that checks both sides, and coordinate producer and consumer updates when the contract changes. Do not introduce a shared runtime package solely to remove such a mirror; follow the existing shared-package criteria.
+
+### Changing a shared contract
+
+- Before introducing or changing a contract, identify its owner and canonical source, then search the entire affected scope for both old and new values and their symbolic references. Include production code, configuration, schemas, integrations, tests, documentation and generated artifacts.
+- Replace unjustified production copies with references to the source. Classify each retained occurrence as an independent test expectation, documentation, generated output, a required platform representation, a documented integration mirror, a versioned historical contract, or a genuinely different concept. Explain why retained production copies are necessary.
+- Update affected documentation and supported generated outputs, verify all required representations, and run the relevant contract and behavior checks. At handoff, name the canonical source, report the scope checked and any limitations, and confirm whether any unjustified production duplication remains. Repeated manual edits to independent production definitions indicate missing or incorrectly scoped ownership.
 
 ## Composer and packaging
 
@@ -77,8 +96,9 @@ This file contains the cross-module rules that an agent should load for every Pr
 ## Database and multistore
 
 - Put database access behind repositories or other focused persistence classes. `Db`, `DbQuery`, ObjectModel, and Doctrine DBAL are all acceptable when appropriate to the selected PrestaShop API; no single database API is mandatory.
-- Define a module-owned table name without `_DB_PREFIX_`. If an ObjectModel owns the mapping, keep `TABLE_NAME` and `PRIMARY_KEY` on that model and use them in `$definition`; if one repository owns the table, use a private repository constant; if several infrastructure classes use it, create a small Infrastructure/Database schema metadata class. Domain classes must not know table names.
-- Keep SQL schema, ObjectModel/ORM mapping, and upgrade scripts aligned. ObjectModel fields must declare correct types, validators, size, nullability, and required state. Accept the DDL/PHP identifier duplication at the install boundary and cover critical mapping with a schema self-check or test.
+- Define module-owned table names without `_DB_PREFIX_`. If an ObjectModel owns the mapping, keep `TABLE_NAME` and `PRIMARY_KEY` on that model and use them in `$definition`; if only one repository consumes an identifier, use a private repository constant. When installation, repositories, diagnostics or other infrastructure consumers share schema identifiers (including columns and foreign keys), reuse the mapping owner or a small Infrastructure/Database schema metadata class. Domain classes must not know table names.
+- Keep SQL schema and ObjectModel/ORM mapping aligned, with upgrade scripts implementing the intended schema transitions. ObjectModel fields must declare correct types, validators, size, nullability, and required state. Where DDL/PHP duplication is required at the install boundary, identify the canonical schema owner and check consistency under the shared-contract rules; cover critical mapping with a schema self-check or test.
+- Preserve version-specific identifiers and values required by historical migrations. Do not replace them with a mutable current-schema definition if that changes an older upgrade's meaning. Treat them as explicit historical contracts and verify that the upgrade path reaches the intended current schema.
 - Use `_DB_PREFIX_`, cast numeric identifiers, escape string values with the appropriate PrestaShop/DBAL mechanism, whitelist dynamic SQL fragments, and check write results.
 - Encode identity and idempotency in `UNIQUE` constraints where possible, and index real join/filter/queue/cron paths, including their shop scope. New tables use the target-track engine placeholder and `utf8mb4` unless its documentation requires otherwise.
 - Use transactions and locking for multi-step writes, concurrency-sensitive jobs, and workflows that must remain consistent. Make retry and deduplication behavior explicit for cron and integration flows.
@@ -122,5 +142,6 @@ This file contains the cross-module rules that an agent should load for every Pr
 
 - Every new module must include automated tests and a working documented test command. New or changed business logic must have focused tests; bug fixes should include a regression test.
 - Isolate pure business rules from PrestaShop globals so they can be unit tested. Use narrow adapters, fixtures, or stubs for PrestaShop and database integration; add integration tests when behavior depends on schema, transactions, hooks, multistore, or framework wiring.
+- Contract tests may assert explicit expected literals as independent checks. Do not derive every expectation from the same production constant when that would allow an incorrect contract change to pass undetected. For intentionally mirrored cross-module contracts, verify producer/consumer agreement as well as the expected contract where relevant.
 - Before handing off a change, run the checks relevant to the affected module: PHP syntax, Composer validation/autoload generation, style/lint, Autoindex, automated tests, final scoped production build, install/upgrade path when changed, and targeted manual verification in the declared PrestaShop version.
 - Report exactly which checks ran and any checks that could not run. Do not claim verification from inspection alone.

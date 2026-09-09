@@ -3,7 +3,10 @@
 - Confirm the target PrestaShop track and declared PHP compatibility.
 - Confirm entrypoints stay thin and new business logic is in focused, testable classes.
 - For service wiring changes, check placement and imports against `CONVENTIONS.md` (Hooks and dependency injection). Verify dependency resolution and the affected runtime paths in each intended admin/front container, including context-specific PrestaShop implementations; confirm context-only services are not registered in the opposite container. Report unavailable runtime checks explicitly.
-- Confirm global identifiers are module-prefixed constants with one owner; configuration uses its typed façade and explicit scope.
+- Confirm global identifiers are module-prefixed and have a canonical owner; configuration uses its typed façade and explicit scope.
+- For new or changed shared contracts, identify the owner/source and search the affected scope for old/new values and symbolic references. Confirm production consumers reuse the source and semantically different values remain separate; classify and justify retained copies under `CONVENTIONS.md` (Canonical sources for shared contracts).
+- Verify required platform representations and documented cross-module mirrors agree with their owner; run applicable consistency/contract checks, regenerate generated files, and update affected documentation. Preserve historical migration meaning and verify affected upgrade paths.
+- Confirm contract tests use independent expectations where needed to catch an incorrect canonical value. At handoff, name the canonical source, report search/check limitations, and state whether unjustified production duplication remains.
 - Confirm every admin route/action has the correct ACL, HTTP method, CSRF behavior, route constraints, and installed visible/hidden tab mapping.
 - Run PHP syntax checks and Composer validation/autoload generation where applicable.
 - Run the module's lint/style checks, Autoindex, and automated tests.
