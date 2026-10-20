@@ -29,6 +29,18 @@ This file contains the cross-module rules that an agent should load for every Pr
 - Business rules, workflows, persistence, mapping, and API communication belong in focused classes. Do not add extensive inline business logic, god methods, or unrelated responsibilities to an existing large class.
 - Prefer constructor injection and explicit interfaces at boundaries that need substitution in tests. Register classes with several dependencies as container services.
 
+## Human-readable source and formatting
+
+- Write code for a developer debugging it manually: descriptive names, focused functions, explicit control flow and error handling. Avoid compressed multi-statement lines, deeply nested expressions and clever shortcuts that hide intent. Comments explain reasons, invariants or compatibility constraints rather than restating obvious operations.
+- At project intake, inspect existing formatting/linting conventions and supported language versions. Preserve a compatible established style; otherwise configure a project-local formatter and a non-mutating check before feature work. Separate broad initial normalization from behavior changes in its own commit or PR.
+- Use Prettier for the project's supported JavaScript/TypeScript, CSS/SCSS and hand-maintained JSON/YAML. Documentation/HTML can opt in after checking their syntax and generation contracts. Keep PHP under PHP-CS-Fixer with the project's PSR-12-compatible rules and declared minimum PHP; do not run two competing formatters on one file.
+- Do not parse Twig or Smarty as plain HTML. Use a formatter/plugin only after verifying the exact syntax and supported platform; otherwise retain explicit readability and rendering review. Choose a suitable existing formatter for Python and other languages rather than forcing them through Prettier. Record gaps in automated coverage.
+- Commit formatter configuration, explicit scope/exclusions, exact tool versions and dependency lockfiles, documented format/check commands, and an EditorConfig appropriate to the project. Editors, agents and CI use the same local tools. Do not depend on an unpinned global formatter or install tools into a client's shop.
+- Exclude dependencies, minified/build outputs, binaries, package-manager lockfiles and historical evidence. Generate derived resources through their canonical owners; do not independently reformat generated translations, mail templates, wiring or manifests. Explain exceptions; never exclude a failing source merely to obtain a green check.
+- After editing, format owned sources, inspect the diff, regenerate affected outputs, then run format checks, lint, contract checks and relevant tests before independent review. CI must check without writing and block build/release on failure. Missing tools or unexecuted checks are reported as such, not passed; do not bypass sandbox restrictions to install them.
+- Formatter output is not evidence of correctness, security or comprehensibility. Reviewers also assess naming, responsibilities and readable error paths. Distinguish style suggestions from security vulnerabilities.
+- Keep readable canonical sources in Git. Minification is a separate optional build step. Formatting tools, node_modules, their development configuration and instructions must stay outside the installable ZIP under the runtime package allowlist.
+
 ## Identifiers and configuration
 
 - Namespace routes, service IDs, configuration/cache/lock/cron keys, custom hooks, assets, and other global identifiers with the module name. Use structured service IDs such as `<module>.<area>.<responsibility>`.

@@ -15,6 +15,9 @@
 - Visually inspect changed admin/front forms in each supported PrestaShop version and declared theme, including a narrow viewport and keyboard interaction. Open choice widgets and toggle applicable overrides; check native styling, loaded assets and absence of duplicate JavaScript initialization. Successful HTML rendering or HTTP tests alone do not establish correct appearance or widget behavior.
 - Run PHP syntax checks and Composer validation/autoload generation where applicable.
 - Run the module's lint/style checks, Autoindex, and automated tests.
+- Apply CONVENTIONS.md (Human-readable source and formatting): check naming, focused functions, control flow, comments and error paths as well as automatic formatting.
+- Verify the project-local formatter version/configuration, documented write/check commands and CI enforcement. Run the non-mutating format check before tests/review; report its actual outcome and unsupported-language gaps.
+- Confirm formatting preserves generated resources, historical evidence and dependencies; inspect normalization separately from behavior changes. Verify formatter tooling/configuration and node_modules are absent from the installable ZIP.
 - Require tests for every new module and focused or regression tests for changed business behavior.
 - If installation, schema, ObjectModel/ORM mapping, configuration, hooks, translations, or multistore behavior changed, verify the relevant install/upgrade and runtime paths.
 - Confirm unique constraints/indexes match invariants and query paths; confirm no hardcoded shop/language/entity IDs.
