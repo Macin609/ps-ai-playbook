@@ -20,6 +20,9 @@
 - Confirm unique constraints/indexes match invariants and query paths; confirm no hardcoded shop/language/entity IDs.
 - Confirm monetary decisions avoid floats and stored operational timestamps use UTC.
 - Build and test the final production artifact after dependency scoping; confirm no development packages or obsolete Avalanche wrapper packages were added.
+- Validate the actual installable ZIP against the explicit runtime allowlist in CONVENTIONS.md (Composer and packaging), including hidden files and bundled dependencies. Confirm development/AI documentation, tests, tools, environment files, backups, working data and secrets are absent, while required runtime/install/upgrade files and mandatory licenses/notices remain.
+- Check the module root and every directory in the extracted ZIP for `index.php`, including dependency directories; verify existing functional entrypoints were preserved. Exercise directory creation during installation/upgrades/runtime and verify guards are created before private data is written.
+- Record the private-directory HTTP checks from CHECKLIST_SECURITY.md against the extracted artifact in an isolated environment. Missing guards, missing required access-denial files, prohibited package contents, or failed/unperformed required protection checks block release.
 - For API/cron changes, verify timeouts, TLS, retry bounds, locks, idempotency, batching/deadlines, summaries, and operational state.
 - Confirm English source strings and matching `cs-CZ` and `sk-SK` XLF entries.
 - Report checks that ran and checks that could not run; do not describe inspection as execution.
